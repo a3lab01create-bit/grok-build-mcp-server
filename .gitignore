@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.npm
+*.tgz
+
+# OMC + tool artifacts
+.omc/
+cache/
+smoke.mjs
