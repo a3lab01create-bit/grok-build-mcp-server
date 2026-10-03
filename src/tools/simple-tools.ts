@@ -40,11 +40,14 @@ export const helpTool: UnifiedTool = {
     return [
       'Grok Build MCP Server — available tools:',
       '',
-      '• grok       — Query Grok (xAI). Args: prompt (required), model, effort.',
-      '• web-search — Web search incl. X/Twitter, Grok-synthesized. Args: query (required), summarize.',
-      '• ping       — Health check. Args: message (optional).',
-      '• help       — This message.',
+      '• grok        — Query Grok (xAI). Args: prompt (required), model, effort.',
+      '• web-search  — Web search incl. X/Twitter, Grok-synthesized. Args: query (required), summarize.',
+      '• grok-result — Collect an answer that was still running, waiting up to 50s per call. Args: job_id (required), wait_seconds.',
+      '• grok-cancel — Cancel a still-running job. Args: job_id (required).',
+      '• ping        — Health check. Args: message (optional).',
+      '• help        — This message.',
       '',
+      'grok and web-search return a job_id instead of an answer when Grok takes longer than ~45s, so no call is cut off by client timeouts (e.g. the Claude desktop app cancels at ~60s).',
       'Auth: uses your local grok login. Override the binary with GROK_CLI_PATH.',
     ].join('\n');
   },

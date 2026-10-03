@@ -23,7 +23,7 @@ export class Logger {
   }
 
   static debug(message: string, ...args: unknown[]): void {
-    if (process.env.AGY_MCP_DEBUG) {
+    if (process.env.GROK_MCP_DEBUG) {
       console.warn(this.format(message), ...args);
     }
   }

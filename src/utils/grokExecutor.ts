@@ -1,9 +1,10 @@
 import { executeCommand } from './commandExecutor.js';
-import { CLI } from '../constants.js';
+import { CLI, DEFAULTS } from '../constants.js';
 
 export interface GrokOptions {
   model?: string;
   effort?: string;
+  signal?: AbortSignal;
 }
 
 /**
@@ -12,6 +13,18 @@ export interface GrokOptions {
  */
 function grokCommand(): string {
   return process.env.GROK_CLI_PATH || CLI.COMMANDS.GROK;
+}
+
+function timeoutMs(): number {
+  const raw = process.env.GROK_TIMEOUT_MS;
+  if (raw === undefined || raw === '') return DEFAULTS.TIMEOUT_MS;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : DEFAULTS.TIMEOUT_MS;
+}
+
+/** Comma-separated built-in grok tools to remove; empty string allows all. */
+function disallowedTools(): string {
+  return process.env.GROK_DISALLOWED_TOOLS ?? DEFAULTS.DISALLOWED_TOOLS;
 }
 
 /**
@@ -58,11 +71,18 @@ export async function executeGrokCLI(
   if (opts.effort) {
     args.push(CLI.FLAGS.EFFORT, opts.effort);
   }
+  const disallowed = disallowedTools();
+  if (disallowed) {
+    args.push(CLI.FLAGS.DISALLOWED_TOOLS, disallowed);
+  }
   args.push(CLI.FLAGS.OUTPUT_FORMAT, CLI.OUTPUT_JSON);
 
   // -p must come last; its value is the prompt.
   args.push(CLI.FLAGS.PRINT, prompt);
 
-  const raw = await executeCommand(grokCommand(), args, onProgress);
+  const raw = await executeCommand(grokCommand(), args, onProgress, {
+    signal: opts.signal,
+    timeoutMs: timeoutMs(),
+  });
   return extractText(raw);
 }

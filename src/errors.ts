@@ -1,5 +1,5 @@
 /**
- * Custom error classes for the Antigravity MCP Server
+ * Custom error classes for the Grok Build MCP Server
  */
 
 export class ToolExecutionError extends Error {

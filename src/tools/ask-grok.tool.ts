@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { UnifiedTool } from './registry.js';
 import { executeGrokCLI } from '../utils/grokExecutor.js';
+import { runOrDetach } from './jobs.tool.js';
 import { ERROR_MESSAGES, STATUS_MESSAGES } from '../constants.js';
 
 const PROMPT_DESC =
@@ -22,7 +23,7 @@ const askGrokArgsSchema = z.object({
 export const askGrokTool: UnifiedTool = {
   name: 'grok',
   description:
-    'Query xAI Grok (the Grok Build CLI) — strong at web research, direct critique / red-teaming, and code + analysis. Use @path to include files in the prompt.',
+    'Query xAI Grok (the Grok Build CLI) — strong at web research, direct critique / red-teaming, and code + analysis. Use @path to include files in the prompt. If the answer takes longer than ~45s, this returns a job_id instead; collect the answer with grok-result.',
   zodSchema: askGrokArgsSchema,
   annotations: {
     title: 'Query Grok (xAI)',
@@ -45,19 +46,26 @@ export const askGrokTool: UnifiedTool = {
     required: ['prompt'],
   },
   prompt: { description: 'Query Grok AI with optional model and effort level.' },
-  execute: async (args, onProgress) => {
+  execute: async (args, onProgress, signal) => {
     const prompt = (args.prompt as string)?.trim();
     if (!prompt) {
       throw new Error(ERROR_MESSAGES.NO_PROMPT_PROVIDED);
     }
-    const result = await executeGrokCLI(
-      prompt,
-      {
-        model: args.model as string | undefined,
-        effort: args.effort as string | undefined,
+    return runOrDetach(
+      `grok: ${prompt.slice(0, 80)}`,
+      async (jobSignal) => {
+        const result = await executeGrokCLI(
+          prompt,
+          {
+            model: args.model as string | undefined,
+            effort: args.effort as string | undefined,
+            signal: jobSignal,
+          },
+          onProgress
+        );
+        return `${STATUS_MESSAGES.GROK_RESPONSE}\n${result}`;
       },
-      onProgress
+      signal
     );
-    return `${STATUS_MESSAGES.GROK_RESPONSE}\n${result}`;
   },
 };
