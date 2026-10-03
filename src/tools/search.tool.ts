@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { UnifiedTool } from './registry.js';
 import { executeGrokCLI } from '../utils/grokExecutor.js';
+import { runOrDetach } from './jobs.tool.js';
 
 const QUERY_DESC =
   'Search query for web search. REQUIRED. Natural language or keywords. Grok searches the web (including X / Twitter) and synthesizes results.';
@@ -15,7 +16,7 @@ const searchArgsSchema = z.object({
 export const searchTool: UnifiedTool = {
   name: 'web-search',
   description:
-    'Search the web (including X / Twitter) via Grok and synthesize results.',
+    'Search the web (including X / Twitter) via Grok and synthesize results. If it takes longer than ~45s, this returns a job_id instead; collect the answer with grok-result.',
   zodSchema: searchArgsSchema,
   annotations: {
     title: 'Web Search (Grok)',
@@ -33,7 +34,7 @@ export const searchTool: UnifiedTool = {
     required: ['query'],
   },
   prompt: { description: 'Search the web (incl. X) for real-time info via Grok.' },
-  execute: async (args, onProgress) => {
+  execute: async (args, onProgress, signal) => {
     const query = (args.query as string)?.trim();
     if (!query) {
       throw new Error('Please provide a search query');
@@ -43,7 +44,17 @@ export const searchTool: UnifiedTool = {
         ? `Search the web for: "${query}". Provide a comprehensive summary of the findings with key facts, dates, and sources.`
         : `Search the web for: "${query}". Return the raw search results with sources.`;
 
-    const result = await executeGrokCLI(searchPrompt, {}, onProgress);
-    return `Search results for "${query}":\n\n${result}`;
+    return runOrDetach(
+      `web-search: ${query.slice(0, 80)}`,
+      async (jobSignal) => {
+        const result = await executeGrokCLI(
+          searchPrompt,
+          { signal: jobSignal },
+          onProgress
+        );
+        return `Search results for "${query}":\n\n${result}`;
+      },
+      signal
+    );
   },
 };
